@@ -179,7 +179,7 @@ stages:
       displayName: Store Application Artifact
       inputs:
         path: $(System.DefaultWorkingDirectory)/artifact_2
-        artifact: $(api1_project_name)
+        artifact: $(api2_project_name)
 
   - job: PublishDockerImage1
     dependsOn: 
