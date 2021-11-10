@@ -45,35 +45,6 @@ parameters:
     default: ' ' # Empty space because the azure does not let us have a optional parameter for now. The code will handle this value if you deploy with an empty space.
     displayName: 'Tag to deploy in staging. Caution: check if the inserted tag is one (major/minor/patch) version higher than the latest tag in master.'
 
-variables:
-  organization: 'mundipagg'
-  team: 'Hub'
-
-  execute_sdk_publish: 'false'
-  sdk_project_name: ''
-  sdk_project_path: ''
-  sdk_nuget_target: ''
-  netstandard_version: ''
-  nuget_config: ''
-  execute_test: 'true'
-  test_project_base_folder: 'Hub.InternalApp.Vtex.Tests'
-  test_project_path: 'Hub.InternalApp.Vtex.Tests/Hub.InternalApp.Vtex.Tests.csproj'
-  execute_sonarqube: 'true'
-  sonarqube_project: 'mundipagg_hub-internalapp-vtex'
-  sonarqube_account: 'Sonarqube'
-  execute_runscope: 'true'
-  integration_test_delay: '15s' 
-  execute_docker_publish: 'true'
-  docker_image_name: 'hub/app_vtex'
-  docker_registry: 'mpdockerregistry.azurecr.io'
-  docker_registry_account: 'MundipaggRegistry'
-  env_vars_prefix: 'HUBAPP_VTEX_'
-  additional_env_vars: |
-    ASPNETCORE_ENVIRONMENT
-    CORECLR_ENABLE_PROFILING
-    NEW_RELIC_LICENSE_KEY
-    NEW_RELIC_APP_NAME
-
 stages:
 - stage: BuildApp
   jobs:        
