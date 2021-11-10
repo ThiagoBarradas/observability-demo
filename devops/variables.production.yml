@@ -1,0 +1,5 @@
+variables:
+- template: variables.release.yml
+- group: Default_PRD
+- group: ObservabilityDemoApi_PRD
+- group: ObservabilityDemoInternalApi_PRD

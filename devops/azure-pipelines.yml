@@ -1,0 +1,315 @@
+# Basic rules:
+# - commit with '[staging X.Y.Z]' -> forces staging deploy with version like 1.5.3-alpha.20200518.1
+# - develop                       -> no deploy, no package, version like 20200518.1
+# - hotfix or release             -> deploy staging / pre release package (like 1.5.3-preview.1)
+# - any tag                       -> deploy production / release package  (like 1.5.3)
+
+variables:
+  organization: 'barradas'
+  api1_netcore_version: '3.1'
+  api1_project_name: 'ObservabilityDemo.Api'
+  api1_project_path: 'ObservabilityDemo.Api/ObservabilityDemo.Api.csproj'
+  api1_project_folder: 'ObservabilityDemo.Api'
+  api1_port: '8700'
+  api1_docker_image_name: 'thiagobarradas/observability-demo-api'
+  api2_netcore_version: '3.1'
+  api2_project_name: 'ObservabilityDemo.InternalApi'
+  api2_project_path: 'ObservabilityDemo.InternalApi/ObservabilityDemo.InternalApi.csproj'
+  api2_project_folder: 'ObservabilityDemo.InternalApi'
+  api2_port: '8701'
+  api2_docker_image_name: 'thiagobarradas/observability-demo-internal-api'
+  docker_registry_account: 'DockerRegistryBarradas'
+
+trigger:
+  branches:
+    include:
+    - release/*  
+    - hotfix/*
+    - develop
+  tags:
+    include: 
+    - '*'
+
+pr:
+  branches:
+    include:
+    - develop
+    - master
+
+pool:
+  vmImage: 'ubuntu-latest' 
+
+parameters:
+  - name: STAGING_TAG
+    type: string
+    default: ' ' # Empty space because the azure does not let us have a optional parameter for now. The code will handle this value if you deploy with an empty space.
+    displayName: 'Tag to deploy in staging. Caution: check if the inserted tag is one (major/minor/patch) version higher than the latest tag in master.'
+
+variables:
+  organization: 'mundipagg'
+  team: 'Hub'
+
+  execute_sdk_publish: 'false'
+  sdk_project_name: ''
+  sdk_project_path: ''
+  sdk_nuget_target: ''
+  netstandard_version: ''
+  nuget_config: ''
+  execute_test: 'true'
+  test_project_base_folder: 'Hub.InternalApp.Vtex.Tests'
+  test_project_path: 'Hub.InternalApp.Vtex.Tests/Hub.InternalApp.Vtex.Tests.csproj'
+  execute_sonarqube: 'true'
+  sonarqube_project: 'mundipagg_hub-internalapp-vtex'
+  sonarqube_account: 'Sonarqube'
+  execute_runscope: 'true'
+  integration_test_delay: '15s' 
+  execute_docker_publish: 'true'
+  docker_image_name: 'hub/app_vtex'
+  docker_registry: 'mpdockerregistry.azurecr.io'
+  docker_registry_account: 'MundipaggRegistry'
+  env_vars_prefix: 'HUBAPP_VTEX_'
+  additional_env_vars: |
+    ASPNETCORE_ENVIRONMENT
+    CORECLR_ENABLE_PROFILING
+    NEW_RELIC_LICENSE_KEY
+    NEW_RELIC_APP_NAME
+
+stages:
+- stage: BuildApp
+  jobs:        
+  - job: CheckVersion
+    variables: 
+      current_counter: $[counter(variables['Build.SourceBranchName'], 1)]    
+    steps:
+    - bash: |
+        if [[ "$(Build.SourceVersionMessage)" =~ "hotfix/" ]];
+        then 
+            echo "##vso[task.setvariable variable=IsHotfix;isOutput=true]true" 
+            echo "##vso[task.setvariable variable=PreviousPrefix;isOutput=true]hotfix"
+        else
+            echo "##vso[task.setvariable variable=IsHotfix;isOutput=true]false"
+            echo "##vso[task.setvariable variable=PreviousPrefix;isOutput=true]release"
+        fi
+        if [[ "$(Build.SourceBranch)" =~ "/hotfix/" ]] ||
+           [[ "$(Build.SourceBranch)" =~ "/release/" ]]; 
+        then
+            version=`sed 's/v//g' <<< $BUILD_SOURCEBRANCHNAME`
+            echo "Generate Preview Release Version"
+            echo "Version: $version"
+            echo "         $version-preview.$(current_counter)"
+            echo "##vso[task.setvariable variable=DeployType;isOutput=true]staging"
+            echo "##vso[task.setvariable variable=PublishDockerImage;isOutput=true]true"
+            echo "##vso[task.setvariable variable=PackingNuget;isOutput=true]true"
+            echo "##vso[task.setvariable variable=PureVersion;isOutput=true]$version"
+            echo "##vso[task.setvariable variable=PackageVersion;isOutput=true]$version-preview.$(current_counter)"
+            echo "##vso[build.updatebuildnumber]$version-preview.$(current_counter)"
+        elif [[ "$(Build.SourceBranch)" =~ "/tags/" ]];
+        then
+            version=`sed 's/v//g' <<< $BUILD_SOURCEBRANCHNAME`
+            echo "Generate Release Version"
+            echo "Version: $version"
+            echo "##vso[task.setvariable variable=DeployType;isOutput=true]production"
+            echo "##vso[task.setvariable variable=PublishDockerImage;isOutput=true]false"
+            echo "##vso[task.setvariable variable=PackingNuget;isOutput=true]false"
+            echo "##vso[task.setvariable variable=SonarMasterWhenTag;isOutput=true]sonar.branch.name=master"
+            echo "##vso[task.setvariable variable=PureVersion;isOutput=true]$version"
+            echo "##vso[task.setvariable variable=PackageVersion;isOutput=true]$version"
+            echo "##vso[build.updatebuildnumber]$version"
+        else
+            echo "Generate Development Version"
+            staging_tag=`echo "${{ parameters.STAGING_TAG }}" | xargs`
+
+            if [[ -z "$staging_tag" ]]
+            then
+              version=`echo "$BUILD_SOURCEVERSIONMESSAGE" | grep -oP '[\[]staging v?\d+.\d+.\d+[\]]' | grep -oP '\d+.\d+.\d+'`
+            else
+              version=`echo "$staging_tag" | grep -oP '\d+.\d+.\d+'`
+            fi
+
+            if [[ -z "$version" ]];
+            then
+                echo "Version: $(Build.BuildNumber)"
+                echo "##vso[task.setvariable variable=PublishDockerImage;isOutput=true]false"
+                echo "##vso[task.setvariable variable=PackingNuget;isOutput=true]false"
+                echo "##vso[task.setvariable variable=PureVersion;isOutput=true]$(Build.BuildNumber)"
+            else
+                echo "Version: $version-alpha.$(Build.BuildNumber)"
+                echo "Force staging enabled!"
+                echo "##vso[task.setvariable variable=DeployType;isOutput=true]staging"
+                echo "##vso[task.setvariable variable=PublishDockerImage;isOutput=true]true"
+                echo "##vso[task.setvariable variable=PackingNuget;isOutput=true]true"
+                echo "##vso[task.setvariable variable=PureVersion;isOutput=true]$version-alpha.$(Build.BuildNumber)"
+                echo "##vso[task.setvariable variable=PackageVersion;isOutput=true]$version-alpha.$(Build.BuildNumber)"
+                echo "##vso[build.updatebuildnumber]$version-alpha.$(Build.BuildNumber)"
+            fi
+        fi
+      displayName: Check Version Number 
+      name: CheckVersionTask
+    - bash: |
+        BUILD_NAME=`echo $(Build.DefinitionName)| sed "s, ,%20,g"`
+        PROJECT_NAME=`echo $(System.TeamProject)| sed "s, ,%20,g"`
+        echo "PROJECT_NAME: $PROJECT_NAME" 
+        echo "BUILD_NAME: $BUILD_NAME" 
+        STAGING_URL="https://$(organization).visualstudio.com/$PROJECT_NAME/_apis/build/status/$BUILD_NAME?branchName=$(CheckVersionTask.PreviousPrefix)/$(Build.BuildNumber)&stageName=DeployStaging"
+        STAGING_RESULT=$`curl --silent $STAGING_URL`
+        echo "URL: $STAGING_URL" 
+        echo "RESULT: $STAGING_RESULT"
+        SUCCEEDED=$`echo $STAGING_RESULT | grep -P 'succeeded' -o | head -n 1`
+        if [[ "$STAGING_RESULT" =~ "succeeded" ]];
+        then
+            echo "$PREVIOUS_PREFIX branch is ok!"
+        else
+            echo "$PREVIOUS_PREFIX branch is not ok!"
+            exit 1
+        fi
+      condition: contains(variables['Build.SourceBranch'], '/tags/')
+      displayName: Break if release/hotfix branch is not passing
+      name: BreakIsReleaseOrHotfixIsNotPassing
+    - bash: env
+      displayName: Show environment variables
+
+  - job: BuildApi1
+    dependsOn: 
+    - CheckVersion
+    condition: succeeded()
+    steps:
+    - script: |
+        pwd && ls -la 
+        dotnet restore "$(api1_project_path)"
+        rm -rf $(System.DefaultWorkingDirectory)/bin
+        dotnet publish -c Release -o $(System.DefaultWorkingDirectory)/bin "$(api1_project_path)"
+        rm -rf artifact_1
+        mkdir -p artifact_1
+        ls artifact_1/bin
+        yes | cp -rf $(System.DefaultWorkingDirectory)/bin artifact_1/bin
+        ls artifact_1/bin
+      displayName: Build Application
+    - task: PublishPipelineArtifact@1
+      displayName: Store Application Artifact
+      inputs:
+        path: $(System.DefaultWorkingDirectory)/artifact_1
+        artifact: $(api1_project_name)
+
+  - job: BuildApi2
+    dependsOn: 
+    - CheckVersion
+    condition: succeeded()
+    steps:
+    - script: |
+        pwd && ls -la 
+        dotnet restore "$(api2_project_path)"
+        rm -rf $(System.DefaultWorkingDirectory)/bin
+        dotnet publish -c Release -o $(System.DefaultWorkingDirectory)/bin "$(api2_project_path)"
+        rm -rf artifact_2
+        mkdir -p artifact_2
+        ls artifact_1/bin
+        yes | cp -rf $(System.DefaultWorkingDirectory)/bin artifact_2/bin
+        ls artifact_2/bin
+      displayName: Build Application
+    - task: PublishPipelineArtifact@1
+      displayName: Store Application Artifact
+      inputs:
+        path: $(System.DefaultWorkingDirectory)/artifact_2
+        artifact: $(api1_project_name)
+
+  - job: PublishDockerImage1
+    dependsOn: 
+    - CheckVersion
+    - BuildApi1
+    condition: |
+      and
+      (
+        eq(dependencies.CheckVersion.outputs['CheckVersionTask.PublishDockerImage'], 'true'),
+        eq(dependencies.CheckVersion.result, 'Succeeded'),
+        eq(dependencies.BuildApi1.result, 'Succeeded')
+      )
+    variables:
+      ReleaseVersion: $(Build.BuildNumber)
+      PureVersion: $[ dependencies.CheckVersion.outputs['CheckVersionTask.PureVersion'] ]
+    steps:
+    - script: |
+        echo "Version: $(ReleaseVersion)"
+        echo "         $(PureVersion)"
+      displayName: Printing Versions
+    - task: Docker@2
+      displayName: 'Build Docker Image'
+      inputs:
+        containerRegistry: '$(docker_registry_account)'
+        repository: '$(api1_docker_image_name)'
+        command: 'build'
+        arguments: --build-arg port=$(api1_port) --build-arg name=$(api1_project_name)
+        Dockerfile: '$(System.DefaultWorkingDirectory)/devops/Dockerfile'
+        buildContext: '$(System.DefaultWorkingDirectory)/src'
+        tags: |
+          $(ReleaseVersion)
+          $(PureVersion)    
+    - task: Docker@2
+      displayName: 'Push Docker Image'
+      inputs:
+        containerRegistry: '$(docker_registry_account)'
+        repository: '$(api1_docker_image_name)'
+        command: 'push'
+        tags: |
+          $(ReleaseVersion)
+          $(PureVersion)    
+
+  - job: PublishDockerImage2
+    dependsOn: 
+    - CheckVersion
+    - BuildApi2
+    condition: |
+      and
+      (
+        eq(dependencies.CheckVersion.outputs['CheckVersionTask.PublishDockerImage'], 'true'),
+        eq(dependencies.CheckVersion.result, 'Succeeded'),
+        eq(dependencies.BuildApi2.result, 'Succeeded')
+      )
+    variables:
+      ReleaseVersion: $(Build.BuildNumber)
+      PureVersion: $[ dependencies.CheckVersion.outputs['CheckVersionTask.PureVersion'] ]
+    steps:
+    - script: |
+        echo "Version: $(ReleaseVersion)"
+        echo "         $(PureVersion)"
+      displayName: Printing Versions
+    - task: Docker@2
+      displayName: 'Build Docker Image'
+      inputs:
+        containerRegistry: '$(docker_registry_account)'
+        repository: '$(api2_docker_image_name)'
+        command: 'build'
+        arguments: --build-arg port=$(api2_port) --build-arg name=$(api2_project_name)
+        Dockerfile: '$(System.DefaultWorkingDirectory)/devops/Dockerfile'
+        buildContext: '$(System.DefaultWorkingDirectory)/src'
+        tags: |
+          $(ReleaseVersion)
+          $(PureVersion)    
+    - task: Docker@2
+      displayName: 'Push Docker Image'
+      inputs:
+        containerRegistry: '$(docker_registry_account)'
+        repository: '$(api2_docker_image_name)'
+        command: 'push'
+        tags: |
+          $(ReleaseVersion)
+          $(PureVersion)    
+
+- stage: DeployProduction
+  dependsOn: 
+  - BuildApp
+  condition: and(succeeded(), contains(variables['Build.SourceBranch'], '/tags/'))
+  jobs:
+  - deployment: DeployProduction
+    variables:
+      - template: variables.production.yml
+      - name: IsHotfix
+        value: $[ stageDependencies.ProductOwnerApproval.PrintingIsHotfix.outputs['PrintingIsHotfixTask.IsHotfix'] ]
+    environment: 'Production'
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - script: |
+              echo "some deploy"
+
+
