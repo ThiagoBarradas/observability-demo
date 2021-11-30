@@ -5,7 +5,12 @@ namespace ObservabilityDemo.Api.Models.Request
 {
     public class TestRequest
     {
-        public Guid Id { get; set; } = Guid.NewGuid();
+        public TestRequest()
+        {
+            this.Id = Guid.NewGuid();
+        }
+
+        public Guid? Id { get; set; }
 
         public int SleepMongo { get; set; }
 

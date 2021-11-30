@@ -19,7 +19,10 @@ namespace ObservabilityDemo.Api
         public static void ConfigureHealthcheck(IHealthChecksBuilder builder, IServiceProvider provider)
         {
             var mongoConfiguration = provider.GetService<MongoConfiguration>();
-            builder.AddMongoDb(mongoConfiguration.ConnectionString, mongoConfiguration.Database, name: "mongodb");
+            builder.AddMongoDb(mongoConfiguration.ConnectionString, mongoConfiguration.Database, name: "mongo_db", timeout: TimeSpan.FromSeconds(2));
+
+            var internalApiSettings = provider.GetService<InternalApiSettings>();
+            builder.AddUrlGroup(new Uri(internalApiSettings.Url), "internal_api", timeout: TimeSpan.FromSeconds(2));
         }
 
         public static void ConfigureServices(IServiceCollection services)
