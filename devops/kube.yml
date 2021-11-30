@@ -1,0 +1,17 @@
+apiVersion: apps/v1
+kind: Deployment # Pod Service Cluster
+metadata:
+  name: observability-demo
+  labels:                                
+    app-version: 1.0.0
+spec:
+  replicas: 2
+  containers:
+  - name: obsevability-api
+    image: thiagobarradas/observability-demo-api:1.0.0
+    ports:
+      - containerPort: 8700
+  - name: obsevability-internal-api
+    image: thiagobarradas/observability-demo-internal-api:1.0.0
+    ports:
+      - containerPort: 8701

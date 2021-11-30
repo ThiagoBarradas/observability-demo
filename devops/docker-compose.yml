@@ -11,9 +11,20 @@ services:
       args:
         name: ObservabilityDemo.Api
         port: 8700
+    environment:
+      CORECLR_ENABLE_PROFILING: 1
+      NEW_RELIC_DISTRIBUTED_TRACING_ENABLED: 1
+      NEW_RELIC_APP_NAME: "ObservabilityDemo.Api 1"
+      NEW_RELIC_LICENSE_KEY: "${NR_LICENSE}"
+    links:
+      - mongodb
+      - internalapidemo
+    depends_on:
+      - mongodb
+      - internalapidemo
 
-  internal-api-demo:
-    container_name: internal-api-demo
+  internalapidemo:
+    container_name: internalapidemo
     ports: 
       - "8701:8701" 
     build:
@@ -22,6 +33,12 @@ services:
       args:
         name: ObservabilityDemo.InternalApi
         port: 8701
+    environment:
+      CORECLR_ENABLE_PROFILING: 1
+      NEW_RELIC_DISTRIBUTED_TRACING_ENABLED: 1
+      NEW_RELIC_APP_NAME: "ObservabilityDemo.InternalApi 1"
+      NEW_RELIC_LICENSE_KEY: "${NR_LICENSE}"
+      NR_LICENSE: "${NR_LICENSE}"
 
   mongodb:
     image: mongo:3.6.20-xenial

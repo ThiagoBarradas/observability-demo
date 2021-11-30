@@ -5,11 +5,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Folder Include="Controllers\" />
+    <PackageReference Include="AspNetScaffolding3" Version="1.8.3" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="AspNetScaffolding3" Version="1.8.2" />
+    <ProjectReference Include="..\ObservabilityDemo.LoggerSetup\ObservabilityDemo.LoggerSetup.csproj" />
   </ItemGroup>
 
 

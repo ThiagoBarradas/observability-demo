@@ -14,6 +14,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "devops", "devops", "{6C50F8
 		..\devops\azure-pipelines.yml = ..\devops\azure-pipelines.yml
 		..\devops\docker-compose.yml = ..\devops\docker-compose.yml
 		..\devops\Dockerfile = ..\devops\Dockerfile
+		..\devops\kube.yml = ..\devops\kube.yml
 		..\devops\variables.production.yml = ..\devops\variables.production.yml
 		..\devops\variables.release.yml = ..\devops\variables.release.yml
 	EndProjectSection
@@ -29,6 +30,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "github", "github", "{BA64C6
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "git", "git", "{85CFC03E-93FE-4C10-AEAD-4412BCF316A2}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ObservabilityDemo.LoggerSetup", "ObservabilityDemo.LoggerSetup\ObservabilityDemo.LoggerSetup.csproj", "{E1D748CE-029E-4807-BB17-223B16A33E65}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -43,6 +46,10 @@ Global
 		{8B3DFCAD-9DC0-4C8B-B687-34B62C719691}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{8B3DFCAD-9DC0-4C8B-B687-34B62C719691}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{8B3DFCAD-9DC0-4C8B-B687-34B62C719691}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E1D748CE-029E-4807-BB17-223B16A33E65}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E1D748CE-029E-4807-BB17-223B16A33E65}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E1D748CE-029E-4807-BB17-223B16A33E65}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E1D748CE-029E-4807-BB17-223B16A33E65}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
