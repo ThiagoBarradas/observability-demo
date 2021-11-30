@@ -1,8 +1,8 @@
 version: '3'
 
 services:
-  api-demo:
-    container_name: api-demo
+  apidemotdc:
+    container_name: apidemotdc1
     ports: 
       - "8700:8700" 
     build:
@@ -14,17 +14,17 @@ services:
     environment:
       CORECLR_ENABLE_PROFILING: 1
       NEW_RELIC_DISTRIBUTED_TRACING_ENABLED: 1
-      NEW_RELIC_APP_NAME: "ObservabilityDemo.Api 1"
+      NEW_RELIC_APP_NAME: "ObservabilityDemo.Api TDC 1"
       NEW_RELIC_LICENSE_KEY: "${NR_LICENSE}"
     links:
       - mongodb
-      - internalapidemo
+      - internalapidemotdc1
     depends_on:
       - mongodb
-      - internalapidemo
+      - internalapidemotdc1
 
-  internalapidemo:
-    container_name: internalapidemo
+  internalapidemotdc1:
+    container_name: internalapidemotdc1
     ports: 
       - "8701:8701" 
     build:
@@ -36,9 +36,8 @@ services:
     environment:
       CORECLR_ENABLE_PROFILING: 1
       NEW_RELIC_DISTRIBUTED_TRACING_ENABLED: 1
-      NEW_RELIC_APP_NAME: "ObservabilityDemo.InternalApi 1"
+      NEW_RELIC_APP_NAME: "ObservabilityDemo.InternalApi TDC 1"
       NEW_RELIC_LICENSE_KEY: "${NR_LICENSE}"
-      NR_LICENSE: "${NR_LICENSE}"
 
   mongodb:
     image: mongo:3.6.20-xenial
