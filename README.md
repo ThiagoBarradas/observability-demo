@@ -10,3 +10,5 @@ From root path, set `NR_LICENSE` with your license key as environment variable a
 export NR_LICENSE=<your-new-relic-license-key>
 docker-compose -f devops/docker-compose.yml up --force-recreate --build
 ```
+
+[Postman basic collection](https://www.getpostman.com/collections/5282b23394f59b47aaec)
